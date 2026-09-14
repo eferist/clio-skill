@@ -1,0 +1,10 @@
+{
+  "name": "clio",
+  "displayName": "Clio",
+  "description": "Read and write the DF Labs board (Clio) from any Claude Code session — orient, check in, report, mint, note. No repo clone, no token: your board password, cached as a cookie. Two verbs, kept apart: check-in is the attendance, report is what happened.",
+  "version": "0.1.0",
+  "author": { "name": "DF Labs" },
+  "homepage": "https://github.com/eferist/clio-skill",
+  "repository": "https://github.com/eferist/clio-skill",
+  "keywords": ["dflabs", "clio", "board", "mnemosyne"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "clio",
+  "owner": { "name": "DF Labs", "url": "https://github.com/eferist" },
+  "plugins": [
+    { "name": "clio", "source": "./" }
+  ]
+}
