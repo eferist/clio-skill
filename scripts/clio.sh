@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # clio.sh — thin HTTP client for the DF Labs board (Clio).
 #
-# Two ways in, and the script picks whichever you have:
-#   - a bearer token (~/.config/clio/token or $CLIO_TOKEN) — what the terminal
-#     client has always used;
-#   - or your board password, which logs in once and caches the 30-day session
-#     cookie. No repo clone, no token minting — any Claude Code session can
-#     read and write the board.
+# One way in: your DF-OS terminal pass, used as a bearer token
+# (~/.config/clio/token or $CLIO_TOKEN). Get it from DF-OS with
+# `hub token <slug>`. Clio has no password sign-in of its own any more — DF-OS
+# keeps the accounts (audit, 2026-10-13). No repo clone: any Claude Code
+# session can read and write the board.
 # State lives on the server; every write comes back with its commit hash.
 #
 # Usage:
@@ -25,18 +24,13 @@
 #
 # Config dir  ~/.config/clio  (override with $CLIO_CONFIG):
 #   url     base URL           (default https://clio.dflabs.id)
-#   slug    your member slug   (or $CLIO_SLUG)
-#   token   bearer token       (or $CLIO_TOKEN) — used if present
-#   pass    password, chmod 600 (or $CLIO_PASSWORD; else prompted once)
-#   cookie  cached cookie jar  (managed here — do not edit)
+#   token   your DF-OS pass, chmod 600 (or $CLIO_TOKEN) — from `hub token <slug>`
 set -euo pipefail
 
 CFG="${CLIO_CONFIG:-$HOME/.config/clio}"
 mkdir -p "$CFG"; chmod 700 "$CFG" 2>/dev/null || true
 URL="$(cat "$CFG/url" 2>/dev/null || echo 'https://clio.dflabs.id')"; URL="${URL%/}"
-SLUG="${CLIO_SLUG:-$(cat "$CFG/slug" 2>/dev/null || true)}"
 TOKEN="${CLIO_TOKEN:-$(cat "$CFG/token" 2>/dev/null || true)}"
-JAR="$CFG/cookie"
 
 # JSON-encode one argument safely (quotes, newlines, unicode).
 jenc() { python3 -c 'import json,sys; sys.stdout.write(json.dumps(sys.argv[1]))' "$1"; }
@@ -55,8 +49,7 @@ jids() { python3 -c 'import json,sys; print(json.dumps([x.strip().upper() for x 
 
 req() { # METHOD PATH [JSONBODY]
   local m="$1" p="$2" body="${3:-}"
-  local -a auth=()
-  if [ -n "$TOKEN" ]; then auth=(-H "Authorization: Bearer $TOKEN"); else auth=(-b "$JAR"); fi
+  local -a auth=(-H "Authorization: Bearer $TOKEN")
   if [ -n "$body" ]; then
     curl -sS --max-time 25 "${auth[@]}" -X "$m" "$URL$p" -H 'Content-Type: application/json' -d "$body"
   else
@@ -66,23 +59,9 @@ req() { # METHOD PATH [JSONBODY]
 
 logged_in() { req GET /api/me 2>/dev/null | grep -q '"slug"'; }
 
-login() {
-  [ -n "$SLUG" ] || { printf 'Your Clio slug (e.g. noel): ' >&2; read -r SLUG; echo "$SLUG" > "$CFG/slug"; }
-  local pw="${CLIO_PASSWORD:-$(cat "$CFG/pass" 2>/dev/null || true)}"
-  if [ -z "$pw" ]; then printf 'Clio password for %s: ' "$SLUG" >&2; read -rs pw; echo >&2; fi
-  local body; body="$(jobj "slug=$(jenc "$SLUG")" "password=$(jenc "$pw")")"
-  local code; code="$(curl -sS --max-time 25 -c "$JAR" -o /dev/null -w '%{http_code}' \
-    -X POST "$URL/api/login" -H 'Content-Type: application/json' -d "$body")"
-  [ "$code" = "200" ] || { echo "login failed ($code) — check slug/password/url in $CFG" >&2; exit 1; }
-  chmod 600 "$JAR" 2>/dev/null || true
-}
-
 ensure_auth() {
-  if [ -n "$TOKEN" ]; then
-    logged_in || { echo "that token is not valid — remove $CFG/token to sign in with your password instead" >&2; exit 1; }
-  else
-    logged_in || login
-  fi
+  [ -n "$TOKEN" ] || { echo "no Clio pass yet — get one from DF-OS (hub token <your-slug>) and save it in $CFG/token" >&2; exit 1; }
+  logged_in || { echo "that pass is not valid — get a new one from DF-OS (hub token <your-slug>) and save it in $CFG/token" >&2; exit 1; }
 }
 
 cmd="${1:-mine}"; shift || true

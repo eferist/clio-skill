@@ -3,7 +3,7 @@
 **Clio** is DF Labs' board at https://clio.dflabs.id. This plugin lets you read
 and write it from any Claude Code session, in any folder, mid-conversation:
 check in for the day, report what moved, mint a task, see what is going on.
-No repo clone, no token to mint. Your board password, once.
+No repo clone. One DF-OS pass, saved once.
 
 It is a pure client. State lives on the board's server, where a git repo is
 the state and every write is a commit signed with your name. Nothing here
@@ -22,23 +22,18 @@ they also fire on plain sentences like "check in", "report this to clio",
 
 ## Sign in
 
-You need an account on the board. Ask Noel for one if you do not have it.
+You need an account on DF-OS. Ask Noel for one if you do not have it.
 
-The first time a skill talks to the board it asks two things in the terminal:
-your **slug** (the short name the board knows you by, e.g. `risang`) and your
-**password**. It signs in the way the website does and keeps the session
-cookie for 30 days under `~/.config/clio/`. It never stores the password.
-
-If you prefer not to be asked, set it once:
+Clio has no password of its own: DF-OS keeps the accounts. The plugin signs in
+with a DF-OS terminal pass, which you get with `hub token <your-slug>` (ask
+Noel if you cannot run it). Save it once:
 
 ```sh
 mkdir -p ~/.config/clio && chmod 700 ~/.config/clio
-echo 'risang' > ~/.config/clio/slug
-printf '%s' 'your-password' > ~/.config/clio/pass && chmod 600 ~/.config/clio/pass
+printf '%s' 'your-pass' > ~/.config/clio/token && chmod 600 ~/.config/clio/token
 ```
 
-Already have a bearer token from the old terminal setup in
-`~/.config/clio/token`? It is used as-is; nothing to change.
+Or set `CLIO_TOKEN` in your shell instead.
 
 ## The two verbs
 
@@ -124,8 +119,8 @@ shows it to you; that hash is your receipt.
 
 ## Under the hood
 
-One script, `scripts/clio.sh`, calls the board's HTTP API with your cookie or
-token. Each skill is a markdown file telling the assistant when to fire and
+One script, `scripts/clio.sh`, calls the board's HTTP API with your DF-OS
+pass. Each skill is a markdown file telling the assistant when to fire and
 what to send. Read them; they are short. The board's own law, the shape of a
 task, a report, a check-in, lives in the Clio repo's `SPEC.md`.
 
@@ -136,10 +131,10 @@ says "DF Labs" or "Clio" in its own words.
 
 ## Troubleshooting
 
-- **"login failed (401)"** — wrong slug or password. Check `~/.config/clio/slug`;
-  delete `~/.config/clio/pass` if you set one and try again.
-- **"that token is not valid"** — an old token in `~/.config/clio/token`. Remove
-  the file to sign in with your password instead.
+- **"no Clio pass yet"** — save your DF-OS pass (`hub token <your-slug>`) in
+  `~/.config/clio/token`.
+- **"that pass is not valid"** — it has expired or was switched off. Get a new
+  one with `hub token <your-slug>` and replace `~/.config/clio/token`.
 - **"a viewer reads the board — it does not write to it"** — your account is a
   viewer. Ask Noel for a member account.
 - **"done-test required"** — you tried to finish a task that has none. Give one
